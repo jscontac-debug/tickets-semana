@@ -51,6 +51,7 @@
     }
 
     .btn {
+      display: block;
       width: 100%;
       border: none;
       border-radius: 22px;
@@ -63,6 +64,7 @@
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.12);
       text-transform: uppercase;
+      text-align: center;
     }
 
     .btn:active {
@@ -149,11 +151,30 @@
 
   <div class="week" id="weekInfo"></div>
 
-  <button class="btn" onclick="selectSection('Desayuno')">Desayuno</button>
-  <button class="btn" onclick="selectSection('Comida')">Comida</button>
-  <button class="btn" onclick="selectSection('Cena')">Cena</button>
-  <button class="btn" onclick="selectSection('Tickets gasoil')">Tickets gasoil</button>
-  <button class="btn" onclick="selectSection('Parking')">Parking</button>
+  <label class="btn">
+    Desayuno
+    <input type="file" accept="image/*" multiple data-section="Desayuno" onchange="handleFiles(event)">
+  </label>
+
+  <label class="btn">
+    Comida
+    <input type="file" accept="image/*" multiple data-section="Comida" onchange="handleFiles(event)">
+  </label>
+
+  <label class="btn">
+    Cena
+    <input type="file" accept="image/*" multiple data-section="Cena" onchange="handleFiles(event)">
+  </label>
+
+  <label class="btn">
+    Tickets gasoil
+    <input type="file" accept="image/*" multiple data-section="Tickets gasoil" onchange="handleFiles(event)">
+  </label>
+
+  <label class="btn">
+    Parking
+    <input type="file" accept="image/*" multiple data-section="Parking" onchange="handleFiles(event)">
+  </label>
 
   <div class="counter" id="counterBox">
     Desayuno: 0 tickets<br>
@@ -164,19 +185,11 @@
   </div>
 
   <button class="btn secondary" onclick="generateAllPDFs()">Generar PDFs</button>
-  <button class="btn danger" onclick="clearWeek()">Borrar periodo</button>
+  <button class="btn danger" onclick="clearPeriod()">Borrar periodo</button>
 
   <div class="empty-note" id="emptyNote">
-    No hay tickets guardados esta semana.
+    No hay tickets guardados en el periodo actual.
   </div>
-
-  <input
-    id="fileInput"
-    type="file"
-    accept="image/*"
-    multiple
-    onchange="handleFiles(event)"
-  >
 </div>
 
 <div class="message" id="message">
@@ -185,11 +198,10 @@
 </div>
 
 <script>
-const DB_NAME = "ticketsSemanaDB_v3";
+const DB_NAME = "ticketsSemanaDB_v4";
 const STORE_NAME = "tickets";
 
 let db = null;
-let currentSection = null;
 
 const sections = [
   "Desayuno",
@@ -199,12 +211,12 @@ const sections = [
   "Parking"
 ];
 
-window.onload = async () => {
+window.addEventListener("load", async () => {
   db = await openDB();
   showWeekInfo();
   await updateCounters();
   registerServiceWorker();
-};
+});
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
@@ -254,7 +266,6 @@ function getISOWeekData(date = new Date()) {
   return { week, year, monday, sunday };
 }
 
-
 function getMonthData(date = new Date()) {
   const year = date.getFullYear();
   const monthIndex = date.getMonth();
@@ -302,35 +313,34 @@ function showWeekInfo() {
   `;
 }
 
-function selectSection(section) {
-  currentSection = section;
-  document.getElementById("fileInput").value = "";
-  document.getElementById("fileInput").click();
-}
-
 async function handleFiles(event) {
-  const files = Array.from(event.target.files);
-  if (!files.length || !currentSection) return;
+  const input = event.target;
+  const files = Array.from(input.files);
+  const section = input.dataset.section;
+
+  if (!files.length || !section) return;
 
   const w = getISOWeekData();
+  const m = getMonthData();
 
   for (const file of files) {
     const base64 = await fileToCompressedBase64(file);
 
     const ticket = {
       id: self.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
-      section: currentSection,
+      section: section,
       image: base64,
       createdAt: file.lastModified || Date.now(),
       week: w.week,
       year: w.year,
-      month: getMonthData().monthNumber,
-      monthYear: getMonthData().year
+      month: m.monthNumber,
+      monthYear: m.year
     };
 
     await saveTicket(ticket);
   }
 
+  input.value = "";
   showCompleted();
   await updateCounters();
 }
@@ -465,11 +475,11 @@ async function generateAllPDFs() {
   }
 
   if (!generated) {
-    alert("No hay tickets para generar PDFs esta semana.");
+    alert("No hay tickets para generar PDFs en el periodo actual.");
   }
 }
 
-async async function generatePDF(section, tickets) {
+async function generatePDF(section, tickets) {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF("p", "mm", "a4");
 
@@ -541,7 +551,7 @@ async async function generatePDF(section, tickets) {
   }
 }
 
-async async function clearWeek() {
+async function clearPeriod() {
   if (!confirm("¿Borrar los tickets del periodo actual? Se borrarán los semanales y el gasoil del mes actual.")) return;
 
   const w = getISOWeekData();
