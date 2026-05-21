@@ -1,4 +1,4 @@
-const CACHE_NAME = "tickets-semana-v4";
+const CACHE_NAME = "tickets-semana-v5";
 
 const ASSETS = [
   "./",

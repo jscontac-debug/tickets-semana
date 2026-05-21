@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tickets Semana</title>
 
-  <link rel="manifest" href="manifest.json?v=4">
+  <link rel="manifest" href="manifest.json?v=5">
   <meta name="theme-color" content="#007a3d">
   <link rel="apple-touch-icon" href="icon-512.png">
 
@@ -172,27 +172,27 @@
 
   <div class="uploadBtn">
     Desayuno
-    <input type="file" accept="image/*" multiple data-section="Desayuno" onchange="handleFiles(event)">
+    <input type="file" accept="image/*" capture="environment" multiple data-section="Desayuno" onchange="handleFiles(event)">
   </div>
 
   <div class="uploadBtn">
     Comida
-    <input type="file" accept="image/*" multiple data-section="Comida" onchange="handleFiles(event)">
+    <input type="file" accept="image/*" capture="environment" multiple data-section="Comida" onchange="handleFiles(event)">
   </div>
 
   <div class="uploadBtn">
     Cena
-    <input type="file" accept="image/*" multiple data-section="Cena" onchange="handleFiles(event)">
+    <input type="file" accept="image/*" capture="environment" multiple data-section="Cena" onchange="handleFiles(event)">
   </div>
 
   <div class="uploadBtn">
     Tickets gasoil
-    <input type="file" accept="image/*" multiple data-section="Tickets gasoil" onchange="handleFiles(event)">
+    <input type="file" accept="image/*" capture="environment" multiple data-section="Tickets gasoil" onchange="handleFiles(event)">
   </div>
 
   <div class="uploadBtn">
     Parking
-    <input type="file" accept="image/*" multiple data-section="Parking" onchange="handleFiles(event)">
+    <input type="file" accept="image/*" capture="environment" multiple data-section="Parking" onchange="handleFiles(event)">
   </div>
 
   <div class="counter" id="counterBox">
@@ -217,7 +217,7 @@
 </div>
 
 <script>
-const DB_NAME = "ticketsSemanaDB_v5";
+const DB_NAME = "ticketsSemanaDB_v6";
 const STORE_NAME = "tickets";
 
 let db = null;
@@ -243,7 +243,7 @@ window.addEventListener("load", async () => {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js?v=4").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=5").catch(() => {});
   }
 }
 
