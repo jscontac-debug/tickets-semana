@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tickets Semana</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007a3d">
+  <link rel="apple-touch-icon" href="icon-512.png">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+      font-family: Arial, sans-serif;
+      color: #222;
+    }
+
+    .app {
+      width: 100%;
+      padding: 24px;
+      padding-top: 34px;
+      padding-bottom: 40px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 800;
+    }
+
+    .week {
+      text-align: center;
+      font-size: 20px;
+      color: #555;
+      line-height: 1.45;
+      margin-top: 10px;
+      margin-bottom: 28px;
+    }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 22px;
+      padding: 28px 18px;
+      margin-bottom: 16px;
+      background: #007a3d;
+      color: white;
+      font-size: 28px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+      text-transform: uppercase;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .secondary {
+      background: #2f2f2f;
+      font-size: 23px;
+      padding: 25px;
+      margin-top: 18px;
+    }
+
+    .danger {
+      background: #c9002b;
+      font-size: 23px;
+      padding: 25px;
+    }
+
+    .counter {
+      background: white;
+      border-radius: 22px;
+      padding: 24px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+      font-size: 21px;
+      line-height: 1.9;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    .empty-note {
+      display: none;
+      background: #fff3cd;
+      color: #5c4600;
+      padding: 16px;
+      border-radius: 16px;
+      margin-top: 16px;
+      font-size: 18px;
+      line-height: 1.4;
+    }
+
+    .message {
+      position: fixed;
+      inset: 0;
+      background: white;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 9999;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .check {
+      font-size: 115px;
+      color: #007a3d;
+      margin-bottom: 20px;
+    }
+
+    .messageText {
+      font-size: 34px;
+      font-weight: bold;
+      color: #007a3d;
+    }
+
+    input[type=file] {
+      display: none;
+    }
+
+    @media (max-width: 420px) {
+      h1 { font-size: 32px; }
+      .week { font-size: 18px; }
+      .btn { font-size: 24px; padding: 25px 14px; }
+      .counter { font-size: 19px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+  <h1>Tickets Semana</h1>
+
+  <div class="week" id="weekInfo"></div>
+
+  <button class="btn" onclick="selectSection('Desayuno')">Desayuno</button>
+  <button class="btn" onclick="selectSection('Comida')">Comida</button>
+  <button class="btn" onclick="selectSection('Cena')">Cena</button>
+  <button class="btn" onclick="selectSection('Tickets gasoil')">Tickets gasoil</button>
+  <button class="btn" onclick="selectSection('Parking')">Parking</button>
+
+  <div class="counter" id="counterBox">
+    Desayuno: 0 tickets<br>
+    Comida: 0 tickets<br>
+    Cena: 0 tickets<br>
+    Tickets gasoil: 0 tickets<br>
+    Parking: 0 tickets
+  </div>
+
+  <button class="btn secondary" onclick="generateAllPDFs()">Generar PDFs</button>
+  <button class="btn danger" onclick="clearWeek()">Borrar periodo</button>
+
+  <div class="empty-note" id="emptyNote">
+    No hay tickets guardados esta semana.
+  </div>
+
+  <input
+    id="fileInput"
+    type="file"
+    accept="image/*"
+    multiple
+    onchange="handleFiles(event)"
+  >
+</div>
+
+<div class="message" id="message">
+  <div class="check">✔</div>
+  <div class="messageText">Acción completada</div>
+</div>
+
+<script>
+const DB_NAME = "ticketsSemanaDB_v3";
+const STORE_NAME = "tickets";
+
+let db = null;
+let currentSection = null;
+
+const sections = [
+  "Desayuno",
+  "Comida",
+  "Cena",
+  "Tickets gasoil",
+  "Parking"
+];
+
+window.onload = async () => {
+  db = await openDB();
+  showWeekInfo();
+  await updateCounters();
+  registerServiceWorker();
+};
+
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+
+    request.onupgradeneeded = e => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = e => resolve(e.target.result);
+    request.onerror = e => reject(e);
+  });
+}
+
+function getISOWeekData(date = new Date()) {
+  const temp = new Date(Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  ));
+
+  const day = temp.getUTCDay() || 7;
+  temp.setUTCDate(temp.getUTCDate() + 4 - day);
+
+  const yearStart = new Date(Date.UTC(temp.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((temp - yearStart) / 86400000) + 1) / 7);
+  const year = temp.getUTCFullYear();
+
+  const monday = new Date(date);
+  const localDay = monday.getDay() || 7;
+  monday.setDate(monday.getDate() - localDay + 1);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  return { week, year, monday, sunday };
+}
+
+
+function getMonthData(date = new Date()) {
+  const year = date.getFullYear();
+  const monthIndex = date.getMonth();
+
+  const firstDay = new Date(year, monthIndex, 1);
+  firstDay.setHours(0, 0, 0, 0);
+
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  lastDay.setHours(23, 59, 59, 999);
+
+  const monthNumber = monthIndex + 1;
+  const monthName = date.toLocaleDateString("es-ES", { month: "long" });
+
+  return {
+    year,
+    monthIndex,
+    monthNumber,
+    monthName,
+    firstDay,
+    lastDay
+  };
+}
+
+function isMonthlySection(section) {
+  return section === "Tickets gasoil";
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+}
+
+function showWeekInfo() {
+  const w = getISOWeekData();
+  const m = getMonthData();
+  const monthTitle = m.monthName.charAt(0).toUpperCase() + m.monthName.slice(1);
+
+  document.getElementById("weekInfo").innerHTML = `
+    Semana ${w.week} / ${w.year}<br>
+    Periodo semanal: ${formatDate(w.monday)} - ${formatDate(w.sunday)}<br>
+    Gasoil: ${monthTitle} ${m.year}
+  `;
+}
+
+function selectSection(section) {
+  currentSection = section;
+  document.getElementById("fileInput").value = "";
+  document.getElementById("fileInput").click();
+}
+
+async function handleFiles(event) {
+  const files = Array.from(event.target.files);
+  if (!files.length || !currentSection) return;
+
+  const w = getISOWeekData();
+
+  for (const file of files) {
+    const base64 = await fileToCompressedBase64(file);
+
+    const ticket = {
+      id: self.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+      section: currentSection,
+      image: base64,
+      createdAt: file.lastModified || Date.now(),
+      week: w.week,
+      year: w.year,
+      month: getMonthData().monthNumber,
+      monthYear: getMonthData().year
+    };
+
+    await saveTicket(ticket);
+  }
+
+  showCompleted();
+  await updateCounters();
+}
+
+function fileToCompressedBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = e => {
+      const img = new Image();
+
+      img.onload = () => {
+        const maxWidth = 1200;
+        const scale = Math.min(1, maxWidth / img.width);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveTicket(ticket) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(ticket);
+    tx.oncomplete = resolve;
+    tx.onerror = reject;
+  });
+}
+
+function getTickets() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const request = tx.objectStore(STORE_NAME).getAll();
+
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = reject;
+  });
+}
+
+async function getCurrentWeekTickets(section = null) {
+  const w = getISOWeekData();
+  const all = await getTickets();
+
+  return all
+    .filter(t => t.week === w.week && t.year === w.year)
+    .filter(t => !section || t.section === section)
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+async function getCurrentMonthTickets(section = null) {
+  const m = getMonthData();
+  const all = await getTickets();
+
+  return all
+    .filter(t => {
+      if (t.month && t.monthYear) {
+        return t.month === m.monthNumber && t.monthYear === m.year;
+      }
+
+      const d = new Date(t.createdAt);
+      return d >= m.firstDay && d <= m.lastDay;
+    })
+    .filter(t => !section || t.section === section)
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+async function getCurrentPeriodTickets(section = null) {
+  if (isMonthlySection(section)) {
+    return getCurrentMonthTickets(section);
+  }
+
+  return getCurrentWeekTickets(section);
+}
+
+async function updateCounters() {
+  const data = {};
+  let total = 0;
+
+  for (const section of sections) {
+    data[section] = (await getCurrentPeriodTickets(section)).length;
+    total += data[section];
+  }
+
+  document.getElementById("counterBox").innerHTML = `
+    Desayuno: ${data["Desayuno"]} tickets<br>
+    Comida: ${data["Comida"]} tickets<br>
+    Cena: ${data["Cena"]} tickets<br>
+    Tickets gasoil: ${data["Tickets gasoil"]} tickets<br>
+    Parking: ${data["Parking"]} tickets
+  `;
+
+  document.getElementById("emptyNote").style.display = total === 0 ? "block" : "none";
+}
+
+function showCompleted() {
+  const msg = document.getElementById("message");
+  msg.style.display = "flex";
+
+  if (navigator.vibrate) {
+    navigator.vibrate(120);
+  }
+
+  setTimeout(() => {
+    msg.style.display = "none";
+  }, 1000);
+}
+
+async function generateAllPDFs() {
+  let generated = 0;
+
+  for (const section of sections) {
+    const tickets = await getCurrentPeriodTickets(section);
+
+    if (tickets.length) {
+      await generatePDF(section, tickets);
+      generated++;
+    }
+  }
+
+  if (!generated) {
+    alert("No hay tickets para generar PDFs esta semana.");
+  }
+}
+
+async async function generatePDF(section, tickets) {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("p", "mm", "a4");
+
+  const w = getISOWeekData();
+  const m = getMonthData();
+  const monthly = isMonthlySection(section);
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(18);
+  pdf.text(`TICKETS ${section.toUpperCase()}`, 10, 15);
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(12);
+
+  if (monthly) {
+    const monthTitle = m.monthName.charAt(0).toUpperCase() + m.monthName.slice(1);
+    pdf.text(`Mes: ${monthTitle} / ${m.year}`, 10, 24);
+    pdf.text(`Periodo: ${formatDate(m.firstDay)} - ${formatDate(m.lastDay)}`, 10, 31);
+  } else {
+    pdf.text(`Semana ${w.week} / ${w.year}`, 10, 24);
+    pdf.text(`Periodo: ${formatDate(w.monday)} - ${formatDate(w.sunday)}`, 10, 31);
+  }
+
+  let x = 10;
+  let y = 40;
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 10;
+  const gap = 8;
+  const width = 90;
+  const height = 120;
+
+  for (let i = 0; i < tickets.length; i++) {
+    if (y + height > pageHeight - margin) {
+      pdf.addPage();
+      x = margin;
+      y = margin;
+    }
+
+    pdf.addImage(
+      tickets[i].image,
+      "JPEG",
+      x,
+      y,
+      width,
+      height,
+      undefined,
+      "FAST"
+    );
+
+    x += width + gap;
+
+    if (x + width > pageWidth - margin) {
+      x = margin;
+      y += height + gap;
+    }
+  }
+
+  const safeSection = section
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_]/g, "");
+
+  if (monthly) {
+    pdf.save(`${safeSection}_Mes_${String(m.monthNumber).padStart(2, "0")}_${m.year}.pdf`);
+  } else {
+    pdf.save(`${safeSection}_Semana_${w.week}_${w.year}.pdf`);
+  }
+}
+
+async async function clearWeek() {
+  if (!confirm("¿Borrar los tickets del periodo actual? Se borrarán los semanales y el gasoil del mes actual.")) return;
+
+  const w = getISOWeekData();
+  const m = getMonthData();
+  const all = await getTickets();
+
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
+
+  all
+    .filter(t => {
+      if (t.section === "Tickets gasoil") {
+        if (t.month && t.monthYear) {
+          return t.month === m.monthNumber && t.monthYear === m.year;
+        }
+
+        const d = new Date(t.createdAt);
+        return d >= m.firstDay && d <= m.lastDay;
+      }
+
+      return t.week === w.week && t.year === w.year;
+    })
+    .forEach(t => store.delete(t.id));
+
+  tx.oncomplete = async () => {
+    await updateCounters();
+    alert("Periodo borrado");
+  };
+}
+</script>
+
+</body>
+</html>
