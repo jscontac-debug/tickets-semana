@@ -2,7 +2,7 @@
   "name": "Tickets Semana",
   "short_name": "Tickets",
   "description": "App local para tickets semanales y tickets de gasoil mensuales.",
-  "start_url": "./?v=5",
+  "start_url": "./?v=6",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f4f4",

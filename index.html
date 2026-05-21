@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tickets Semana</title>
 
-  <link rel="manifest" href="manifest.json?v=5">
+  <link rel="manifest" href="manifest.json?v=6">
   <meta name="theme-color" content="#007a3d">
   <link rel="apple-touch-icon" href="icon-512.png">
 
@@ -217,7 +217,7 @@
 </div>
 
 <script>
-const DB_NAME = "ticketsSemanaDB_v6";
+const DB_NAME = "ticketsSemanaDB_v7";
 const STORE_NAME = "tickets";
 
 let db = null;
@@ -243,7 +243,7 @@ window.addEventListener("load", async () => {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js?v=5").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=6").catch(() => {});
   }
 }
 
@@ -536,9 +536,12 @@ async function generatePDF(section, tickets) {
   const pageWidth = 210;
   const pageHeight = 297;
   const margin = 10;
-  const gap = 8;
-  const width = 90;
-  const height = 120;
+  const gap = 5;
+
+  // 3 columnas x 2 filas = 6 tickets por página.
+  // Así caben al menos 5 fotos en cada hoja A4.
+  const width = 60;
+  const height = 105;
 
   for (let i = 0; i < tickets.length; i++) {
     if (y + height > pageHeight - margin) {
