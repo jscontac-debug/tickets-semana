@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tickets Semana</title>
-  <link rel="manifest" href="manifest.json?v=8">
+  <link rel="manifest" href="manifest.json?v=9">
   <meta name="theme-color" content="#007a3d">
   <link rel="apple-touch-icon" href="icon-512.png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{margin:0;background:#f4f4f4;font-family:Arial,sans-serif;color:#222}
@@ -50,7 +49,7 @@
 <div class="message" id="message"><div class="check">✔</div><div class="messageText">Acción completada</div></div>
 <div class="modal" id="summaryModal"><div class="modalBox"><h2>Resumen económico</h2><div id="summaryContent"></div><button class="btn secondary" onclick="closeSummary()">Cerrar</button></div></div>
 <script>
-const DB_NAME="ticketsSemanaDB_v9", STORE_NAME="tickets";
+const DB_NAME="ticketsSemanaDB_v10", STORE_NAME="tickets";
 let db=null;
 const sections=["Desayuno","Comida","Cena","Tickets gasoil","Parking"];
 const weeklySections=["Desayuno","Comida","Cena","Parking"];
@@ -58,7 +57,7 @@ const monthlySections=["Tickets gasoil"];
 const allowances={"Desayuno":4,"Comida":18,"Cena":13,"Tickets gasoil":0,"Parking":0};
 
 window.addEventListener("load",async()=>{try{db=await openDB();showWeekInfo();await updateCounters();registerServiceWorker()}catch(e){alert("Error al iniciar la app: "+e.message)}});
-function registerServiceWorker(){if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js?v=8").catch(()=>{})}}
+function registerServiceWorker(){if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js?v=9").catch(()=>{})}}
 function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE_NAME))d.createObjectStore(STORE_NAME,{keyPath:"id"})};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej(new Error("No se pudo abrir la memoria local"))})}
 function getISOWeekData(date=new Date()){const temp=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const day=temp.getUTCDay()||7;temp.setUTCDate(temp.getUTCDate()+4-day);const ys=new Date(Date.UTC(temp.getUTCFullYear(),0,1));const week=Math.ceil((((temp-ys)/86400000)+1)/7);const year=temp.getUTCFullYear();const monday=new Date(date);const localDay=monday.getDay()||7;monday.setDate(monday.getDate()-localDay+1);monday.setHours(0,0,0,0);const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);sunday.setHours(23,59,59,999);return{week,year,monday,sunday}}
 function getMonthData(date=new Date()){const year=date.getFullYear(), monthIndex=date.getMonth();const firstDay=new Date(year,monthIndex,1);firstDay.setHours(0,0,0,0);const lastDay=new Date(year,monthIndex+1,0);lastDay.setHours(23,59,59,999);const monthNumber=monthIndex+1;const monthName=date.toLocaleDateString("es-ES",{month:"long"});return{year,monthIndex,monthNumber,monthName,firstDay,lastDay}}
@@ -67,133 +66,19 @@ function formatDate(d){return d.toLocaleDateString("es-ES",{day:"2-digit",month:
 function formatMoney(n){return Number(n||0).toLocaleString("es-ES",{style:"currency",currency:"EUR"})}
 function parseAmount(v){if(v===null)return 0;const clean=String(v).replace(",",".").replace(/[^\d.-]/g,"");const n=parseFloat(clean);return Number.isFinite(n)?n:0}
 
-function formatAmountForInput(n) {
-  return Number(n || 0).toFixed(2).replace(".", ",");
-}
 
-function showOcrMessage(section, current, total) {
-  const msg = document.getElementById("message");
-  const check = msg.querySelector(".check");
-  const text = msg.querySelector(".messageText");
 
-  check.textContent = "⌛";
-  text.innerHTML = `Leyendo importe<br>${section}${total > 1 ? " (" + current + "/" + total + ")" : ""}`;
-  msg.style.display = "flex";
-}
 
-function hideOcrMessage() {
-  const msg = document.getElementById("message");
-  const check = msg.querySelector(".check");
-  const text = msg.querySelector(".messageText");
 
-  msg.style.display = "none";
-  check.textContent = "✔";
-  text.textContent = "Acción completada";
-}
 
-async function detectAmountFromImage(base64) {
-  if (!window.Tesseract) return null;
 
-  try {
-    const result = await Tesseract.recognize(base64, "spa+eng", {
-      logger: () => {}
-    });
 
-    const text = result && result.data && result.data.text ? result.data.text : "";
-    return extractBestAmount(text);
-  } catch (e) {
-    return null;
-  }
-}
 
-function extractBestAmount(text) {
-  if (!text) return null;
 
-  const upper = text.toUpperCase();
-
-  const priorityPatterns = [
-    /TOTAL\s*(?:EUR|EUROS|€)?\s*[:\-]?\s*(\d{1,4}[,.]\d{2})/g,
-    /IMPORTE\s*(?:EUR|EUROS|€)?\s*[:\-]?\s*(\d{1,4}[,.]\d{2})/g,
-    /A\s*PAGAR\s*(?:EUR|EUROS|€)?\s*[:\-]?\s*(\d{1,4}[,.]\d{2})/g,
-    /TARJETA\s*(?:EUR|EUROS|€)?\s*[:\-]?\s*(\d{1,4}[,.]\d{2})/g,
-    /EFECTIVO\s*(?:EUR|EUROS|€)?\s*[:\-]?\s*(\d{1,4}[,.]\d{2})/g
-  ];
-
-  for (const pattern of priorityPatterns) {
-    const matches = [...upper.matchAll(pattern)];
-    if (matches.length) {
-      return parseAmount(matches[matches.length - 1][1]);
-    }
-  }
-
-  const allAmounts = [...upper.matchAll(/(\d{1,4}[,.]\d{2})\s*(?:€|EUR)?/g)]
-    .map(m => parseAmount(m[1]))
-    .filter(n => Number.isFinite(n) && n > 0 && n < 10000);
-
-  if (!allAmounts.length) return null;
-
-  return Math.max(...allAmounts);
-}
 
 function showWeekInfo(){const w=getISOWeekData(),m=getMonthData();const mt=m.monthName.charAt(0).toUpperCase()+m.monthName.slice(1);document.getElementById("weekInfo").innerHTML=`Semana ${w.week} / ${w.year}<br>Periodo semanal: ${formatDate(w.monday)} - ${formatDate(w.sunday)}<br>Gasoil mensual: ${mt} ${m.year}`}
 
-async function handleFiles(event) {
-  try {
-    const input = event.target;
-    const files = Array.from(input.files || []);
-    const section = input.dataset.section;
-
-    if (!files.length || !section) return;
-
-    const w = getISOWeekData();
-    const m = getMonthData();
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      showOcrMessage(section, i + 1, files.length);
-
-      const base64 = await fileToCompressedBase64(file);
-      const detectedAmount = await detectAmountFromImage(base64);
-
-      hideOcrMessage();
-
-      let amount = detectedAmount;
-
-      if (detectedAmount === null) {
-        amount = parseAmount(prompt(
-          `No he podido detectar el importe del ticket de ${section}. Introdúcelo manualmente:`,
-          ""
-        ));
-      } else {
-        const corrected = prompt(
-          `Importe detectado para ${section}:`,
-          formatAmountForInput(detectedAmount)
-        );
-        amount = parseAmount(corrected);
-      }
-
-      await saveTicket({
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
-        section: section,
-        image: base64,
-        amount: amount,
-        createdAt: file.lastModified || Date.now(),
-        week: w.week,
-        year: w.year,
-        month: m.monthNumber,
-        monthYear: m.year
-      });
-    }
-
-    input.value = "";
-    showCompleted();
-    await updateCounters();
-  } catch (e) {
-    hideOcrMessage();
-    alert("No se pudo guardar la imagen: " + e.message);
-  }
-}
+async function handleFiles(event){try{const input=event.target,files=Array.from(input.files||[]),section=input.dataset.section;if(!files.length||!section)return;const w=getISOWeekData(),m=getMonthData();for(let i=0;i<files.length;i++){const file=files[i];const amount=parseAmount(prompt(`Importe del ticket de ${section} ${files.length>1?"("+(i+1)+"/"+files.length+")":""} en euros:`,""));const base64=await fileToCompressedBase64(file);await saveTicket({id:crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random(),section,image:base64,amount,createdAt:file.lastModified||Date.now(),week:w.week,year:w.year,month:m.monthNumber,monthYear:m.year})}input.value="";showCompleted();await updateCounters()}catch(e){alert("No se pudo guardar la imagen: "+e.message)}}
 function fileToCompressedBase64(file){return new Promise((res,rej)=>{const reader=new FileReader();reader.onload=e=>{const img=new Image();img.onload=()=>{const maxWidth=1200,scale=Math.min(1,maxWidth/img.width);const canvas=document.createElement("canvas");canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);res(canvas.toDataURL("image/jpeg",.82))};img.onerror=()=>rej(new Error("No se pudo leer la imagen"));img.src=e.target.result};reader.onerror=()=>rej(new Error("No se pudo abrir el archivo"));reader.readAsDataURL(file)})}
 function saveTicket(ticket){return new Promise((res,rej)=>{const tx=db.transaction(STORE_NAME,"readwrite");tx.objectStore(STORE_NAME).put(ticket);tx.oncomplete=res;tx.onerror=()=>rej(new Error("No se pudo guardar en memoria local"))})}
 function getTickets(){return new Promise((res,rej)=>{const tx=db.transaction(STORE_NAME,"readonly");const r=tx.objectStore(STORE_NAME).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(new Error("No se pudieron leer los tickets"))})}
@@ -204,7 +89,7 @@ async function getCurrentPeriodTickets(section=null){return isMonthlySection(sec
 async function updateCounters(){const data={};let total=0;for(const section of sections){const tickets=await getCurrentPeriodTickets(section);const amount=tickets.reduce((s,t)=>s+Number(t.amount||0),0);data[section]={count:tickets.length,amount};total+=tickets.length}document.getElementById("counterBox").innerHTML=`Desayuno: ${data["Desayuno"].count} tickets · ${formatMoney(data["Desayuno"].amount)}<br>Comida: ${data["Comida"].count} tickets · ${formatMoney(data["Comida"].amount)}<br>Cena: ${data["Cena"].count} tickets · ${formatMoney(data["Cena"].amount)}<br>Tickets gasoil: ${data["Tickets gasoil"].count} tickets · ${formatMoney(data["Tickets gasoil"].amount)}<br>Parking: ${data["Parking"].count} tickets · ${formatMoney(data["Parking"].amount)}`;document.getElementById("emptyNote").style.display=total===0?"block":"none"}
 function showCompleted(){const msg=document.getElementById("message");msg.style.display="flex";if(navigator.vibrate)navigator.vibrate(120);setTimeout(()=>{msg.style.display="none"},1000)}
 async function generateAllPDFs(){let generated=0;for(const section of sections){const tickets=await getCurrentPeriodTickets(section);if(tickets.length){await generatePDF(section,tickets);generated++}}if(!generated)alert("No hay tickets para generar PDFs en el periodo actual.")}
-async function generatePDF(section,tickets){const{jsPDF}=window.jspdf;const pdf=new jsPDF("p","mm","a4");const w=getISOWeekData(),m=getMonthData(),monthly=isMonthlySection(section);pdf.setFont("helvetica","bold");pdf.setFontSize(18);pdf.text(`TICKETS ${section.toUpperCase()}`,10,15);pdf.setFont("helvetica","normal");pdf.setFontSize(12);if(monthly){const mt=m.monthName.charAt(0).toUpperCase()+m.monthName.slice(1);pdf.text(`Mes: ${mt} / ${m.year}`,10,24);pdf.text(`Periodo: ${formatDate(m.firstDay)} - ${formatDate(m.lastDay)}`,10,31)}else{pdf.text(`Semana ${w.week} / ${w.year}`,10,24);pdf.text(`Periodo: ${formatDate(w.monday)} - ${formatDate(w.sunday)}`,10,31)}const totalAmount=tickets.reduce((s,t)=>s+Number(t.amount||0),0);pdf.text(`Total: ${formatMoney(totalAmount)}`,10,38);let x=10,y=46;const pageWidth=210,pageHeight=297,margin=10,gap=5,width=60,height=105;for(let i=0;i<tickets.length;i++){if(y+height>pageHeight-margin){pdf.addPage();x=margin;y=margin}pdf.addImage(tickets[i].image,"JPEG",x,y,width,height,undefined,"FAST");pdf.setFontSize(8);pdf.text(formatMoney(tickets[i].amount||0),x,y+height+4);x+=width+gap;if(x+width>pageWidth-margin){x=margin;y+=height+gap+6}}const safeSection=section.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"_").replace(/[^a-zA-Z0-9_]/g,"");if(monthly)pdf.save(`${safeSection}_Mes_${String(m.monthNumber).padStart(2,"0")}_${m.year}.pdf`);else pdf.save(`${safeSection}_Semana_${w.week}_${w.year}.pdf`)}
+async function generatePDF(section,tickets){const{jsPDF}=window.jspdf;const pdf=new jsPDF("p","mm","a4");const w=getISOWeekData(),m=getMonthData(),monthly=isMonthlySection(section);pdf.setFont("helvetica","bold");pdf.setFontSize(18);pdf.text(`TICKETS ${section.toUpperCase()}`,10,15);pdf.setFont("helvetica","normal");pdf.setFontSize(12);if(monthly){const mt=m.monthName.charAt(0).toUpperCase()+m.monthName.slice(1);pdf.text(`Mes: ${mt} / ${m.year}`,10,24);pdf.text(`Periodo: ${formatDate(m.firstDay)} - ${formatDate(m.lastDay)}`,10,31)}else{pdf.text(`Semana ${w.week} / ${w.year}`,10,24);pdf.text(`Periodo: ${formatDate(w.monday)} - ${formatDate(w.sunday)}`,10,31)}let x=10,y=40;const pageWidth=210,pageHeight=297,margin=10,gap=5,width=60,height=105;for(let i=0;i<tickets.length;i++){if(y+height>pageHeight-margin){pdf.addPage();x=margin;y=margin}pdf.addImage(tickets[i].image,"JPEG",x,y,width,height,undefined,"FAST");pdf.setFontSize(8);pdf.text(formatMoney(tickets[i].amount||0),x,y+height+4);x+=width+gap;if(x+width>pageWidth-margin){x=margin;y+=height+gap+6}}const safeSection=section.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"_").replace(/[^a-zA-Z0-9_]/g,"");if(monthly)pdf.save(`${safeSection}_Mes_${String(m.monthNumber).padStart(2,"0")}_${m.year}.pdf`);else pdf.save(`${safeSection}_Semana_${w.week}_${w.year}.pdf`)}
 
 async function showEconomicSummary(){const rows=[];let totalSpent=0,totalAllowance=0,totalGain=0;for(const section of sections){const tickets=await getCurrentPeriodTickets(section);const count=tickets.length;const spent=tickets.reduce((s,t)=>s+Number(t.amount||0),0);const allowance=count*(allowances[section]||0);const gain=allowance-spent;totalSpent+=spent;totalAllowance+=allowance;totalGain+=gain;rows.push({section,count,spent,allowance,gain})}let html=`<table class="resultTable"><thead><tr><th>Partida</th><th>Nº</th><th>Gastado</th><th>Abono</th><th>Resultado</th></tr></thead><tbody>`;rows.forEach(r=>{html+=`<tr><td>${r.section}</td><td>${r.count}</td><td>${formatMoney(r.spent)}</td><td>${formatMoney(r.allowance)}</td><td>${formatMoney(r.gain)}</td></tr>`});html+=`<tr class="totalRow"><td>TOTAL</td><td></td><td>${formatMoney(totalSpent)}</td><td>${formatMoney(totalAllowance)}</td><td>${formatMoney(totalGain)}</td></tr></tbody></table>`;document.getElementById("summaryContent").innerHTML=html;document.getElementById("summaryModal").style.display="block"}
 function closeSummary(){document.getElementById("summaryModal").style.display="none"}

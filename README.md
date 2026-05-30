@@ -6,8 +6,6 @@
 - Parking: PDF semanal, sin abono
 - Tickets gasoil: PDF mensual, sin abono
 
-Al subir cada ticket se solicita su importe.
+Al subir cada ticket se solicita manualmente su importe.
 El botón Calcular importes muestra gastado, abono y resultado por partida.
-
-
-Versión v8: detección OCR local del importe del ticket.
+Los PDF no muestran el total económico; solo incluyen las imágenes de tickets.
