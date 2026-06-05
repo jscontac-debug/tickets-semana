@@ -1,8 +1,8 @@
 {
   "name": "Tickets Semana",
   "short_name": "Tickets",
-  "description": "App local con modificación, rotación y borrado individual de tickets.",
-  "start_url": "./?v=10",
+  "description": "App local con PDFs limpios, gasoil mensual con litros e importe, y revisión de tickets.",
+  "start_url": "./?v=11",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f4f4",
