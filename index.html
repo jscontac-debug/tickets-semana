@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tickets Semana</title>
-  <link rel="manifest" href="manifest.json?v=12">
+  <link rel="manifest" href="manifest.json?v=13">
   <meta name="theme-color" content="#007a3d">
   <link rel="apple-touch-icon" href="icon-512.png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -28,6 +28,14 @@
     .modalBox h2{margin-top:0;text-align:center}
     .resultTable{width:100%;border-collapse:collapse;font-size:15px}.resultTable th,.resultTable td{border-bottom:1px solid #ddd;padding:8px 4px;text-align:right}.resultTable th:first-child,.resultTable td:first-child{text-align:left}.totalRow{font-weight:bold;background:#f0f0f0}
 
+
+    .sectionCard{background:white;border-radius:22px;padding:16px;margin-bottom:18px;box-shadow:0 4px 10px rgba(0,0,0,.08)}
+    .sectionTitle{font-size:23px;font-weight:800;text-transform:uppercase;margin-bottom:12px;color:#222;text-align:center}
+    .actionGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .fileBtn{position:relative;border-radius:16px;padding:20px 10px;background:#007a3d;color:white;font-size:18px;font-weight:800;text-align:center;overflow:hidden;box-shadow:0 3px 8px rgba(0,0,0,.10)}
+    .fileBtn.gallery{background:#0057b8}
+    .fileBtn input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:100px}
+
     .manageGrid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
     .ticketCard{background:#fff;border-radius:16px;padding:12px;box-shadow:0 3px 8px rgba(0,0,0,.1)}
     .ticketCard img{width:100%;max-height:320px;object-fit:contain;background:#eee;border-radius:12px;display:block}
@@ -44,11 +52,45 @@
 <div class="app">
   <h1>Tickets Semana</h1>
   <div class="week" id="weekInfo"></div>
-  <div class="uploadBtn">Desayuno<input type="file" accept="image/*" capture="environment" multiple data-section="Desayuno" onchange="handleFiles(event)"></div>
-  <div class="uploadBtn">Comida<input type="file" accept="image/*" capture="environment" multiple data-section="Comida" onchange="handleFiles(event)"></div>
-  <div class="uploadBtn">Cena<input type="file" accept="image/*" capture="environment" multiple data-section="Cena" onchange="handleFiles(event)"></div>
-  <div class="uploadBtn">Tickets gasoil<input type="file" accept="image/*" capture="environment" multiple data-section="Tickets gasoil" onchange="handleFiles(event)"></div>
-  <div class="uploadBtn">Parking<input type="file" accept="image/*" capture="environment" multiple data-section="Parking" onchange="handleFiles(event)"></div>
+  <div class="sectionCard">
+    <div class="sectionTitle">Desayuno</div>
+    <div class="actionGrid">
+      <div class="fileBtn">Hacer foto<input type="file" accept="image/*" capture="environment" data-section="Desayuno" onchange="handleFiles(event)"></div>
+      <div class="fileBtn gallery">Galería<input type="file" accept="image/*" multiple data-section="Desayuno" onchange="handleFiles(event)"></div>
+    </div>
+  </div>
+
+  <div class="sectionCard">
+    <div class="sectionTitle">Comida</div>
+    <div class="actionGrid">
+      <div class="fileBtn">Hacer foto<input type="file" accept="image/*" capture="environment" data-section="Comida" onchange="handleFiles(event)"></div>
+      <div class="fileBtn gallery">Galería<input type="file" accept="image/*" multiple data-section="Comida" onchange="handleFiles(event)"></div>
+    </div>
+  </div>
+
+  <div class="sectionCard">
+    <div class="sectionTitle">Cena</div>
+    <div class="actionGrid">
+      <div class="fileBtn">Hacer foto<input type="file" accept="image/*" capture="environment" data-section="Cena" onchange="handleFiles(event)"></div>
+      <div class="fileBtn gallery">Galería<input type="file" accept="image/*" multiple data-section="Cena" onchange="handleFiles(event)"></div>
+    </div>
+  </div>
+
+  <div class="sectionCard">
+    <div class="sectionTitle">Tickets gasoil</div>
+    <div class="actionGrid">
+      <div class="fileBtn">Hacer foto<input type="file" accept="image/*" capture="environment" data-section="Tickets gasoil" onchange="handleFiles(event)"></div>
+      <div class="fileBtn gallery">Galería<input type="file" accept="image/*" multiple data-section="Tickets gasoil" onchange="handleFiles(event)"></div>
+    </div>
+  </div>
+
+  <div class="sectionCard">
+    <div class="sectionTitle">Parking</div>
+    <div class="actionGrid">
+      <div class="fileBtn">Hacer foto<input type="file" accept="image/*" capture="environment" data-section="Parking" onchange="handleFiles(event)"></div>
+      <div class="fileBtn gallery">Galería<input type="file" accept="image/*" multiple data-section="Parking" onchange="handleFiles(event)"></div>
+    </div>
+  </div>
   <div class="counter" id="counterBox"></div>
   <button class="btn edit" onclick="openManagePicker()">Modificar / revisar tickets</button>
   <button class="btn calc" onclick="showEconomicSummary()">Calcular importes</button>
@@ -70,7 +112,7 @@ const monthlySections=["Tickets gasoil"];
 const allowances={"Desayuno":4,"Comida":18,"Cena":13,"Tickets gasoil":0,"Parking":0};
 
 window.addEventListener("load",async()=>{try{db=await openDB();showWeekInfo();await updateCounters();registerServiceWorker()}catch(e){alert("Error al iniciar la app: "+e.message)}});
-function registerServiceWorker(){if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js?v=12").catch(()=>{})}}
+function registerServiceWorker(){if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js?v=13").catch(()=>{})}}
 function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE_NAME))d.createObjectStore(STORE_NAME,{keyPath:"id"})};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej(new Error("No se pudo abrir la memoria local"))})}
 function getISOWeekData(date=new Date()){const temp=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const day=temp.getUTCDay()||7;temp.setUTCDate(temp.getUTCDate()+4-day);const ys=new Date(Date.UTC(temp.getUTCFullYear(),0,1));const week=Math.ceil((((temp-ys)/86400000)+1)/7);const year=temp.getUTCFullYear();const monday=new Date(date);const localDay=monday.getDay()||7;monday.setDate(monday.getDate()-localDay+1);monday.setHours(0,0,0,0);const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);sunday.setHours(23,59,59,999);return{week,year,monday,sunday}}
 function getMonthData(date=new Date()){const year=date.getFullYear(), monthIndex=date.getMonth();const firstDay=new Date(year,monthIndex,1);firstDay.setHours(0,0,0,0);const lastDay=new Date(year,monthIndex+1,0);lastDay.setHours(23,59,59,999);const monthNumber=monthIndex+1;const monthName=date.toLocaleDateString("es-ES",{month:"long"});return{year,monthIndex,monthNumber,monthName,firstDay,lastDay}}
@@ -122,7 +164,7 @@ async function editTicketAmount(id){const t=await getTicketById(id);if(!t)return
 async function deleteOneTicket(id){if(!confirm("¿Borrar este ticket?"))return;await deleteTicketById(id);await openManageSection(currentManageSection);await updateCounters()}
 
 
-async function updateApp(){try{if("serviceWorker" in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const reg of regs){await reg.update()}}if(window.caches){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)))}window.location.href="./?v=12&t="+Date.now()}catch(e){window.location.href="./?v=12&t="+Date.now()}}
+async function updateApp(){try{if("serviceWorker" in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const reg of regs){await reg.update()}}if(window.caches){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)))}window.location.href="./?v=13&t="+Date.now()}catch(e){window.location.href="./?v=13&t="+Date.now()}}
 async function clearWeeklyTickets(){if(!confirm("¿Borrar solo los tickets semanales? Se borrarán Desayuno, Comida, Cena y Parking de la semana actual. No se borrará Gasoil."))return;const w=getISOWeekData(),all=await getTickets();const tx=db.transaction(STORE_NAME,"readwrite"),store=tx.objectStore(STORE_NAME);all.filter(t=>weeklySections.includes(t.section)).filter(t=>t.week===w.week&&t.year===w.year).forEach(t=>store.delete(t.id));tx.oncomplete=async()=>{await updateCounters();alert("Tickets semanales borrados")}}
 async function clearMonthlyTickets(){if(!confirm("¿Borrar solo los tickets mensuales? Se borrará Gasoil del mes actual."))return;const m=getMonthData(),all=await getTickets();const tx=db.transaction(STORE_NAME,"readwrite"),store=tx.objectStore(STORE_NAME);all.filter(t=>monthlySections.includes(t.section)).filter(t=>{if(t.month&&t.monthYear)return t.month===m.monthNumber&&t.monthYear===m.year;const d=new Date(t.createdAt);return d>=m.firstDay&&d<=m.lastDay}).forEach(t=>store.delete(t.id));tx.oncomplete=async()=>{await updateCounters();alert("Tickets mensuales borrados")}}
 </script>

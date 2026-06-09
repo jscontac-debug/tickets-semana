@@ -1,8 +1,8 @@
 {
   "name": "Tickets Semana",
   "short_name": "Tickets",
-  "description": "App local con gasoil no computable y parking compensado al importe pagado.",
-  "start_url": "./?v=12",
+  "description": "App local con cámara o galería por sección.",
+  "start_url": "./?v=13",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f4f4",
